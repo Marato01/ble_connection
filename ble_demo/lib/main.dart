@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
@@ -41,10 +42,8 @@ class _BleScannerState extends State<BleScanner> {
   bool _isScanning = false;
   bool _isConnected = false;
   DiscoveredDevice? _selectedDevice;
-
-  // Replace these with your actual UUIDs
-  final serviceUuid = Uuid.parse('12345678-1234-1234-1234-123456789abc');
-  final characteristicUuid = Uuid.parse('87654321-4321-4321-4321-abc123456789');
+  Uuid? _selectedServiceUuid;
+  Uuid? _selectedCharacteristicUuid;
 
   @override
   void initState() {
@@ -139,7 +138,7 @@ class _BleScannerState extends State<BleScanner> {
         id: device.id,
         connectionTimeout: const Duration(seconds: 10),
       ).listen(
-            (connectionState) {
+            (connectionState) async   {
           debugPrint('Connection state: ${connectionState.connectionState}');
           setState(() {
             _isConnected = connectionState.connectionState == DeviceConnectionState.connected;
@@ -172,8 +171,8 @@ class _BleScannerState extends State<BleScanner> {
 
     try {
       final characteristic = QualifiedCharacteristic(
-        serviceId: serviceUuid,
-        characteristicId: characteristicUuid,
+        serviceId: _selectedServiceUuid!,
+        characteristicId: _selectedCharacteristicUuid!,
         deviceId: _selectedDevice!.id,
       );
 
@@ -185,20 +184,32 @@ class _BleScannerState extends State<BleScanner> {
     }
   }
 
-  Future<void> _writeCharacteristic(List<int> value) async {
+  Future<void> _writeCharacteristic(String value) async {
     if (_selectedDevice == null || !_isConnected) {
       _showErrorDialog('Error', 'No device connected');
       return;
     }
 
+    // Check if service and characteristic UUIDs are set
+    if (_selectedServiceUuid == null || _selectedCharacteristicUuid == null) {
+      _showErrorDialog('Error', 'No service or characteristic selected');
+      return;
+    }
+
     try {
       final characteristic = QualifiedCharacteristic(
-        serviceId: serviceUuid,
-        characteristicId: characteristicUuid,
+        serviceId: _selectedServiceUuid!,
+        characteristicId: _selectedCharacteristicUuid!,
         deviceId: _selectedDevice!.id,
       );
 
-      await _ble.writeCharacteristicWithResponse(characteristic, value: value);
+      // Convert the string to a List<int> for writing
+      final valueAsBytes = utf8.encode(value);
+
+      // final utf8Decoder = utf8.decoder;
+      // final decodedBytes = utf8Decoder.convert(valueAsBytes);
+
+      await _ble.writeCharacteristicWithResponse(characteristic, value: valueAsBytes);
       _showSuccessDialog('Success', 'Value written successfully');
     } catch (e) {
       debugPrint('Error writing characteristic: $e');
@@ -294,7 +305,7 @@ class _BleScannerState extends State<BleScanner> {
                     label: const Text('Read'),
                   ),
                   ElevatedButton.icon(
-                    onPressed: () => _writeCharacteristic([0x01, 0x02, 0x03]),
+                    onPressed: () => _writeCharacteristic('HelloAIfarm'),
                     icon: const Icon(Icons.upload),
                     label: const Text('Write'),
                   ),
