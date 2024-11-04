@@ -20,6 +20,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const BleScanner(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -32,7 +33,7 @@ class BleScanner extends StatefulWidget {
 }
 
 class _BleScannerState extends State<BleScanner> {
-  final FlutterReactiveBle _ble = FlutterReactiveBle();
+  final FlutterReactiveBle _ble = FlutterReactiveBle();  //Initializing the library
   StreamSubscription? _scanStream;
   StreamSubscription? _connectionStream;
   final List<DiscoveredDevice> _devices = [];
@@ -97,7 +98,7 @@ class _BleScannerState extends State<BleScanner> {
       scanMode: ScanMode.balanced,
     ).listen(
           (device) {
-        if (!_deviceIds.contains(device.id)) {
+        if (device.name.isNotEmpty && !_deviceIds.contains(device.id)) {
           setState(() {
             _deviceIds.add(device.id);
             _devices.add(device);
@@ -313,6 +314,7 @@ class _BleScannerState extends State<BleScanner> {
                   child: ListTile(
                     leading: const Icon(Icons.bluetooth),
                     title: Text(
+
                       device.name.isNotEmpty ? device.name : 'Unknown Device',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
